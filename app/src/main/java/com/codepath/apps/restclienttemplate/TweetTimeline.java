@@ -3,6 +3,7 @@ package com.codepath.apps.restclienttemplate;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import okhttp3.Headers;
 
 import android.os.Bundle;
@@ -23,19 +24,37 @@ public class TweetTimeline extends AppCompatActivity {
     TweetsAdapter tweetsAdapter;
     List<Tweet> tweets;
     RecyclerView recyclerViewTweets;
+    SwipeRefreshLayout swipeRefreshLayout;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tweet_timeline);
+
+        this.swipeRefreshLayout = findViewById(R.id.swipeRefresh);
+
+        this.swipeRefreshLayout.setColorSchemeResources(android.R.color.holo_blue_bright,
+                android.R.color.holo_green_light,
+                android.R.color.holo_orange_light,
+                android.R.color.holo_red_light);
+
+        this.swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                populateTimeline();
+            }
+        });
+
         this.tweets = new ArrayList<>();
 
         client = TwitterApp.getRestClient(this);
-        populateTimeline();
 
         this.tweetsAdapter = new TweetsAdapter(tweets, this);
         this.recyclerViewTweets = findViewById(R.id.rvTweets);
         this.recyclerViewTweets.setLayoutManager(new LinearLayoutManager(this));
         this.recyclerViewTweets.setAdapter(tweetsAdapter);
+
+        populateTimeline();
 
     }
 
@@ -44,8 +63,10 @@ public class TweetTimeline extends AppCompatActivity {
             @Override
             public void onSuccess(int statusCode, Headers headers, JSON json) {
                 try {
-                    tweets.addAll(Tweet.fromJsonArray(json.jsonArray));
-                    tweetsAdapter.notifyDataSetChanged();
+                    tweetsAdapter.clear();
+                    tweetsAdapter.addAll(Tweet.fromJsonArray(json.jsonArray));
+                    swipeRefreshLayout.setRefreshing(false);
+
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
